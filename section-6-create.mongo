@@ -1,0 +1,52 @@
+//////////////////////Create Operation/////////////////////
+
+db.persons.insertOne({ name: "Max", age: 30, hobbies: ["Sport", "Cooking"] });
+db.persons.insertOne({ name: "Manu", age: 31, hobbies: ["Car", "Cooking"] });
+db.persons.insertMany([{ name: "Anna", age: 29, hobbies: ["Sports", "Yogo"] }]);
+db.persons.insertMany([
+  { name: "Maria", age: 31 },
+  { name: "Chris", age: 25 }
+]);
+// insert is not recommended, does not return back Object id
+db.persons.insert({ name: "Phil", age: 35 });
+db.persons.insert([
+  { name: "Sandeep", age: 28 },
+  { name: "Hans", age: 38 }
+]);
+
+// ordered insert
+db.hobbies.insertMany([
+  { _id: "sports", name: "Sports" },
+  { _id: "cooking", name: "Cooking" },
+  { _id: "car", name: "Car" }
+]);
+// hiking will not be added in this case due to a key duplication error in cooking, but the yoga will not be rolled back
+db.hobbies.insertMany([
+  { _id: "yoga", name: "Yoga" },
+  { _id: "cooking", name: "Cooking" },
+  { _id: "hiking", name: "Hiking" }
+]);
+// to override the default ordered behaviour
+db.hobbies.insertMany(
+  [
+    { _id: "yoga", name: "Yoga" },
+    { _id: "cooking", name: "Cooking" },
+    { _id: "hiking", name: "Hiking" }
+  ],
+  { ordered: false }
+);
+
+// write concern
+// do not wait for acknowledgement (so faster):
+db.persons.insertOne({name: "Chissy", age: 41}, {writeConcern: {w: 0}})
+// wait for acknowledgement (slower):
+db.persons.insertOne({name: "Alex", age: 36}, {writeConcern: {w: 1}})
+// store the entry in the todo journal, and will be written to disk when engine is free (not gurantee)
+db.persons.insertOne({name: "Micheala", age: 51}, {writeConcern: {w: 1, j: true}})
+// Adding timeout
+db.persons.insertOne({name: "Aliya", age: 22}, {writeConcern: {w: 1, j: true, wtimeout: 200}})
+
+// import data
+// --jsonArray specify it has multipole documents
+// --drop drop the existing documents
+// mongoimport tv-shows.json -d movieData -c movies --jsonArray --drop

@@ -1,0 +1,20 @@
+// transaction must be done with replica set
+
+use blog;
+
+// start transaction by creating session instance
+const session = db.getMongo().startSession();
+session.startTransaction();
+
+// every request run under these instances will be stored as a todo
+const usersCollection = session.getDatabase("blog").users;
+const usersCollection = session.getDatabase("post").posts;
+// this will not run immediately
+usersCollection.deleteOne({_id: ObjectId("dsfgffdfdgbfvgfthgr")});
+usersCollection.deleteOne({userId: ObjectId("dsfgffdfdgbfvgfthgr")});
+
+// commit or abort the transaction
+session.commitTransaction();
+session.abortTransaction();
+
+

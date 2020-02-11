@@ -1,0 +1,14 @@
+// capped collction: when the size exists the defined size or doc count exsits max, automatically delete some old docs
+// by default the capped collection keep the insertion order
+db.createCollection("capped", {capped: true, size: 10000, max: 3})
+
+// replica sets is a duplicated collections stored in difference nodes to 
+// 1. increase the query performance by parallel execution
+// 2. increase fault tolerance, if one node go down, the other nodes can take over
+
+// check replica sets
+rs.status()
+
+// sharding is a technique to split the collections to difference nodes to increase efficiency
+// the shard key is like a partition_key to EVENLY distribute the collection among the nodes therefore should be wisely choosen
+// if the query does not contain the shard key, the mongos router will send a boardcast to all the nodes to get a response from the node which is responsible of the query, otherwise, it will directly forward the query to the corresponding nodes

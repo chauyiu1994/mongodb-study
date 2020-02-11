@@ -1,0 +1,115 @@
+//////////////////////Update Operation/////////////////////
+
+// like setState in react
+db.users.updateOne(
+  { _id: ObjectId("5e365188fa876f02d7253be9") },
+  {
+    $set: {
+      hobbies: [
+        { title: "Sports", frequency: 5 },
+        { title: "Cooking", frequency: 3 },
+        { title: "Hiking", frequency: 1 }
+      ]
+    }
+  }
+);
+
+db.users.updateMany(
+  { "hobbies.title": "Sports" },
+  { $set: { isSporty: true } }
+);
+
+db.users.updateOne(
+  { _id: ObjectId("5e365188fa876f02d7253be9") },
+  { $set: { age: 40, phone: 4785467 } }
+);
+
+// ($inc) increment
+db.users.updateOne({ name: "Manu" }, { $inc: { age: 2 } });
+
+// ($mul) multiply
+db.users.updateOne({ name: "Chris" }, { $mul: { age: 1.5 } });
+
+// can perform multiple operations in some udpate
+db.users.updateOne(
+  { name: "Manu" },
+  { $inc: { age: 1 }, $set: { isSporty: false } }
+);
+// but operating one the same field will result in error:
+// db.users.updateOne({name: "Manu"}, {$inc: {age: 1}, $set: {age: 30}})
+
+// ($min) set the value to min of current value and target value (oposite for max)
+db.users.updateOne({ name: "Chris" }, { $min: { age: 35 } });
+db.users.updateOne({ name: "Chris" }, { $max: { age: 38 } });
+
+// ($unset) drop field
+db.users.updateMany({ isSporty: true }, { $unset: { phone: "" } });
+
+// ($rename) rename
+db.users.updateMany({}, { $rename: { age: "totalAge" } });
+
+// ($upsert) insert if not exists
+db.users.updateOne(
+  { name: "Maria" },
+  {
+    $set: {
+      age: 29,
+      hobbies: [{ title: "Good food", frequency: 3 }],
+      isSporty: true
+    }
+  },
+  { upsert: true }
+);
+
+// updating the matching doc, ($ sign) gives the FIRST matching elements
+db.users.updateMany(
+  {
+    hobbies: { $elemMatch: { title: "Sports", frequency: { $gte: 3 } } }
+  },
+  { $set: { "hobbies.$.highFrequency": true } }
+);
+
+// update scope to the nested doc ($[] sign) gives all the matching elements
+db.users.updateMany(
+  { totalAge: { $gt: 30 } },
+  { $inc: { "hobbies.$[].frequency": -1 } }
+);
+
+// setting up different filters for main doc and sub doc respectively using ($[el])
+db.users.updateMany(
+  { "hobbies.frequency": { $gt: 2 } },
+  { $set: { "hobbies.$[el].goodFrequency": true } },
+  { arrayFilters: [{ "el.frequency": { $gt: 2 } }] }
+);
+
+// add elements to arrays, ($each) for adding multiple elements, ($sort) for sorting after inserted,($slice) for pre-slicing
+db.users.updateOne(
+  { name: "Maria" },
+  { $push: { hobbies: { title: "Sports", frequency: 2 } } }
+);
+db.users.updateOne(
+  { name: "Maria" },
+  {
+    $push: {
+      hobbies: {
+        $each: [
+          { title: "Good Wine", frequency: 1 },
+          { title: "Hiking", frequency: 2 }
+        ],
+        $sort: { frequency: -1 }
+      }
+    }
+  }
+);
+// only add to array when element is not duplicated
+db.users.updateOne({name: "Maria"}, {$addToSet: {title: "Hiking", frequency: 2}})
+
+// removing elements from array (passing filter to $pull)
+// ($pop) pop the last elements of an array if 1 is passed and pop first elements when -1 is passed
+db.users.updateOne(
+  { name: "Maria" },
+  { $pull: { hobbies: { title: "Hiking" } } }
+);
+db.users.updateOne({name: "Chris"}, {$pop: {hobbies: 1}})
+
+

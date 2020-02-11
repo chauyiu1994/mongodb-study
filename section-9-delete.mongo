@@ -1,0 +1,11 @@
+//////////////////////Delete Operation/////////////////////
+
+// using all find operation syntax to search for doc that nedded to be dropped
+db.users.deleteOne({ name: "Chris" });
+
+db.users.deleteMany({ totalAge: { $exists: false }, isSporty: true });
+
+// delete all (admin task likely)
+db.users.deleteMany({})
+db.users.drop()
+db.dropDatabase()

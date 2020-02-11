@@ -1,0 +1,68 @@
+// 1.1 Import the attached data
+// mongoimport boxoffice.json -d boxOffice -c movieStarts --jsonArray --drop
+
+// 1.2 find all movies that have a rating higher than 9.2 and a runtime lower than 100 minutes
+db.movieStarts.find({
+  $and: [{ "meta.rating": { $gt: 9.2 } }, { "meta.runtime": { $lt: 100 } }]
+});
+
+// 1.3 search all movies that have a genre of "drama" or "action"
+db.movieStarts.find({ $or: [{ genre: "drama" }, { genre: "action" }] });
+
+// 1.4 search all movies where visitors exceeded expecreVisitors
+db.movieStarts.find({ $expr: { $gt: ["$visitors", "$expectedVisitors"] } });
+
+// array containAll
+db.movieStarts.find({ genre: { $all: ["action", "thriller"] } });
+
+// 2.1 import the attached data file into a new collection in the boxOffice database
+// mongoimport boxoffice-extended.json -d boxOffice -c exmovieStarts --jsonArray --drop
+
+// 2.2 find all movies with exactly two genres
+db.exmovieStarts.find({ genre: { $size: 2 } });
+
+// 2.3 find all movies whcih aired in 2018
+db.exmovieStarts.find({ "meta.aired": 2018 });
+
+// find all movies whcih have ratings greater than 8 but lower than 10
+db.exmovieStarts.find({ ratings: { $elemMatch: { $gt: 8, $lt: 10 } } });
+
+// cursor
+// find() return a cursor
+db.movies.find().count();
+db.movies.find().next();
+db.movies.find().hasNext();
+// db.movies.find().forEach(doc => printjson(doc))
+
+// sorting: 1 = asc, -1 = desc
+// order = sort > skip > limit no matter how user put the ordering
+// reverse of the natural order (_id)
+db.movies.find().sort({ $natural: -1 });
+db.movies
+  .find()
+  .sort({ "rating.average": 1 }, { runtime: -1 })
+  .skip(100)
+  .limit(10)
+  .pretty();
+
+// projection
+db.movies.find(
+  {},
+  { name: 1, genres: 1, runtime: 1, rating: 1, "schedule.time": 1, _id: 0 }
+);
+
+//
+db.movies.find({ genres: "Drama" }, { "genres.$": 1 });
+db.movies.find({ $all: ["Drama", "Horror"] }, { "genres.$": 1 });
+// find all movies that genre has Drama and only pull out the Horror part
+// $elemMatch search in the SAME document
+db.movies.find(
+  { genres: "Drama" },
+  { genres: { $elemMatch: { $eq: "Horror" } } }
+);
+
+// return slice of array (substring) (output second and third element in this case)
+db.movies.find(
+  { "rating.average": { $gt: 9 } },
+  { genres: { $slice: [1, 2] }, name: 1 }
+);

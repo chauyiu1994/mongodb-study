@@ -1,0 +1,173 @@
+db.companies.insertOne({
+  name: "Fresh Apples Inc",
+  isStartup: true,
+  employees: 33,
+  // too big so will be cropped, can be stored as string
+  funding: 12345678901234567890,
+  details: { ceo: "Mark Super" },
+  tags: [{ title: "super" }, { title: "perfect" }]
+  // (shell syntax) foundingDate: new Date(),
+  // (shell syntax) insertedAt: new Timestamp()
+});
+
+db.numbers.insertOne({ a: 1 });
+db.stats();
+
+db.numbers.deleteMany({});
+
+// shell syntax, create 32 int instead of default 64 int
+//db.numbers.insertOne({a: NumberInt(1)})
+
+/////////////////////////////////One To One//////////////////////////////////////////////////
+
+// example 1
+
+db.patients.insertOne({
+  name: "Max",
+  age: 29,
+  diseaseSummary: "summary-max-1"
+});
+db.diseaseSummaries.insertOne({
+  _id: "summary-max-1",
+  diseases: ["cold", "broken leg"]
+});
+
+// [joining]
+// db.diseaseSummaries.find({
+//   _id: db.patients.findOne({ name: "Max" }, { diseaseSummary: 1, _id: 0 })
+//     .diseaseSummary
+// });
+
+db.patients.deleteMany({});
+
+// Better use embedded document for one to one relationship (for most of the case)
+db.patients.insertOne({
+  name: "Max",
+  age: 29,
+  diseaseSummary: ["cold", "broken leg"]
+});
+
+db.patients.findOne();
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+// example 2
+db.persons.insertOne({ name: "Max", car: { model: "BMW", price: 40000 } });
+db.persons.findOne();
+db.persons.deleteMany({});
+
+// For specific use cases (analytic), going for reference may be better approach to avoid excessive projection calls
+// if cars and persons are commonly fetched independently, go for this approach
+db.persons.insertOne({ name: "Max", age: 29, salary: 3000 });
+db.cars.insertOne({
+  model: "BMW",
+  price: 40000,
+  owner: ObjectId("5e35055d8ec0f70450faf2bf")
+});
+
+/////////////////////////////////One To Many//////////////////////////////////////////////////
+
+// example 1
+db.questionThreads.insertOne({
+  creator: "Max",
+  question: "How does that all work?",
+  answers: ["q1a1", "q1a2"]
+});
+
+db.answers.insertMany([
+  { _id: "q1a1", text: "It works like that." },
+  { _id: "q1a2", text: "Thank!" }
+]);
+
+// more reasonable to model with nested doc since we usually fetch questions with answers
+db.questionThreads.insertOne({
+  creator: "Max",
+  question: "How does that all work?",
+  answers: [
+    { _id: "q1a1", text: "It works like that." },
+    { _id: "q1a2", text: "Thank!" }
+  ]
+});
+
+// example 2
+
+// make sense to model with reference since we normally will not fetch all citizens with cities when cities meta data is needed
+db.cities.insertOne({
+  name: "New York City",
+  coordinates: { lat: 21, lng: 55 }
+});
+db.citzens.insertMany([
+  { name: "Max", cityId: ObjectId("5e351f772c214a049740c7cb") },
+  { name: "Manu", cityId: ObjectId("5e351f772c214a049740c7cb") }
+]);
+
+/////////////////////////////////Many To Many//////////////////////////////////////////////////
+
+// using intermediate collection
+db.products.insertOne({ title: "A Book", price: 12.99 });
+db.customers.insertOne({ name: "Max", age: 29 });
+db.orders.insertOne({
+  productId: ObjectId("5e3520a32c214a049740c7d1"),
+  customerId: ObjectId("5e3520ab2c214a049740c7d2")
+});
+
+// mongodb way
+db.orders.deleteMany({});
+db.customers.updateOne(
+  { name: "Max" },
+  {
+    $set: {
+      orders: [{ productId: ObjectId("5e3520a32c214a049740c7d1"), quantity: 2 }]
+    }
+  }
+);
+// or
+// may even make more sense to take a snapshot becuase change of price may not affect the order in this case
+db.customers.updateOne(
+  { name: "Max" },
+  {
+    $set: {
+      orders: [{ title: "A Book", price: 12.99, quantity: 2 }]
+    }
+  }
+);
+
+// example 2
+db.books.insertOne({
+  name: "My favorite book",
+  authors: [
+    { name: "Max", age: 29 },
+    { name: "Manu", age: 30 }
+  ]
+});
+db.authors.insertMany([
+  { name: "Max", age: 29, address: { street: "Main" } },
+  { name: "Manu", age: 30, address: { street: "Tree" } }
+]);
+
+// better to model with reference in this case since change of author result in requiring to search all book with that author and modify them and it is error prone
+db.books.updateOne(
+  { name: "My favorite book" },
+  {
+    $set: {
+      authors: [
+        ObjectId("5e3523c72c214a049740c7d6"),
+        ObjectId("5e3523c72c214a049740c7d5")
+      ]
+    }
+  }
+);
+
+// $lookup
+// aggregate take an array that specify steps
+// = sql join
+db.books.aggregate([
+  {
+    $lookup: {
+      from: "authors",
+      localField: "authors",
+      foreignField: "_id",
+      as: "creator"
+    }
+  }
+]);

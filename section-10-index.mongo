@@ -1,0 +1,133 @@
+/////////////////////////////////Indexes//////////////////////////////////
+
+// describe how mongodb run the query (pre sort the doc so that it is easier to search)
+// can make the query slower if the query is fetching a lot of doc in different ranges
+// indexing do not make to much sense when the number of distinct values in same field is too few (e.g. index)
+// mongodb will test which appraach is faster to fetch the first 100 docs and use that as a winnig plan and this will be cached for future same query
+db.contacts
+  .explain("executionStats")
+  .find({ "dob.age": { $gt: 60 } })
+  .count();
+
+// adding a single field index
+db.contacts.createIndex({ "dob.age": 1 });
+
+// dropping a index
+db.contacts.dropIndex({ "dob.age": 1 });
+
+// compound index
+// can use (1), (1, 2), (1-3) ... indexes for search but not (2), (2, 3) ... alone
+db.contacts.createIndex({ "dob.age": 1, gender: 1 });
+db.contacts.explain().find({ "dob.age": 35, gender: "male" });
+
+// indexes can also speed up sorting, also for pre-sorting very large collection because mongodb has threshold memory fot sorting
+db.contacts.find({ "dob.age": 35 }).sort({ gender: "male" });
+
+// show indexes info for collection (id index is created by mongo by default)
+db.contacts.getIndexes();
+// drop all indexes except the id index
+db.contacts.dropIndexes();
+
+// unique index, can be used as a constraint
+db.contacts.createIndex({ email: 1 }, { unique: true });
+
+// partial index (make sense if often filter for this combination)
+db.contacts.createIndex(
+  { "dob:age": 1 },
+  { partialFilterExpression: { gender: "male" } }
+);
+
+// create unique index only on existing value
+db.users.insertMany([{ name: "Max", email: "max@test.com" }, { name: "Manu" }]);
+db.users.createIndex(
+  { email: 1 },
+  { unique: true, partialFilterExpression: { email: { $exists: true } } }
+);
+// will not result in an error
+db.users.insertOne({ name: "Maria" });
+
+// adding trigger that document will drop automatically ten seconds after added
+//db.sessions.insertOne({data: "rhfbvefrgthjyhn", createdAt: new Date()})
+db.sessions.createIndex({ createdAt: 1 }, { expireAfterSeconds: 10 });
+
+// covered query (mongo only need to query the index for the answer, no need to reach the collection)
+db.customers.insertMany([
+  { name: "Max", age: 29, salary: 3000 },
+  { name: "Manu", age: 30, salary: 4000 }
+]);
+db.customers.createIndex({ name: 1 });
+db.customers
+  .explain("executionStats")
+  .find({ name: "Max" }, { _id: 0, name: 1 });
+
+// array (multi-key index) (should be created depend on how the collection often be query)
+db.contacts.insertOne({
+  name: "Max",
+  hobbies: ["Cooking", "Sports"],
+  address: [{ street: "Main Street" }, { street: "Second Street" }]
+});
+db.contacts.createIndex({ hobbies: 1 });
+db.contacts.explain("executionStats").find({ hobbies: "Sports" });
+db.contacts.createIndex({ address: 1 });
+db.contacts
+  .explain("executionStats")
+  .find({ address: { street: "Main Street" } });
+db.contacts.createIndex({ "address.street": 1 });
+db.contacts.explain("executionStats").find({ "address.street": "Main Street" });
+
+// will result in error since the level is not parallel
+//db.contacts.createIndex({address: 1, hobbies: 1})
+
+// text index (quite expensive) (case insensitive) (only one per collection)
+db.products.insertMany([
+  {
+    title: "A Book",
+    description: "This is an awesome book about a young artist!"
+  },
+  {
+    title: "Red T-Shirt",
+    description: "This T-shirt is red it's pretty awesome"
+  }
+]);
+db.products.createIndex({ description: "text" });
+// search for text index (partial matching any of the words)
+db.products.find({ $text: { $search: "awesome book" } });
+// search for (partial matching of the whole word)
+db.products.find({ $text: { $search: '"awesome book"' } });
+// sort by text matching score (affected by searching string sequence (and other factors...))
+db.products
+  .find(
+    { $text: { $search: "awesome t-shirt" } },
+    { score: { $meta: "textScore" } }
+  )
+  .sort({ score: { $meta: "textScore" } });
+db.products.dropIndexes();
+
+// compound text index (will search for both fields)
+db.products.createIndex({ title: "text", description: "text" });
+db.products.insertOne({ title: "A Ship", description: "Floats perfectly!" });
+db.products.find({ $text: { $search: "ship" } });
+
+// word exclusion (excluding doc with 'T-shirt' in this case)
+db.products.find({ $text: { $search: "awesome -t-shirt" } });
+
+// can set default language and weight for text index (weight will affect the text score)
+db.products.createIndex(
+  { title: "text", description: "text" },
+  { default_language: "english", weights: { title: 1, description: 10 } }
+);
+
+db.products
+  .find(
+    { $text: { $search: "red", $caseSensitive: true } },
+    { score: { $meta: "textScore" } }
+  )
+  .sort({ score: { $meta: "textScore" } });
+
+// executing mongo js in shell:
+// mongo credit-rating.js
+
+// creating index will lock the table temporarily by default (foreground building)
+// using the background statement to enable backround building (useful for pro-env)
+db.ratings.createIndex({ age: 1 }, { background: true });
+db.ratings.explain().find({ age: { $gt: 80 } });

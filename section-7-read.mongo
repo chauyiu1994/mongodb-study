@@ -1,0 +1,135 @@
+//////////////////////Read Operation/////////////////////
+db.movies.findOne({});
+// find gives cursors
+db.movies.find();
+db.movies.find({ runtime: 60 });
+// same as above
+db.movies.find({ runtime: { $eq: 60 } });
+// not equal
+db.movies.find({ runtime: { $ne: 60 } });
+// lower than
+db.movies.find({ runtime: { $lt: 40 } });
+// greater than
+db.movies.find({ runtime: { $gt: 60 } });
+// lower than or equal to
+db.movies.find({ runtime: { $lte: 60 } });
+// condition in nested doc, must use double quotes
+db.movies.find({ "rating.average": { $gt: 7 } });
+// array contains
+db.movies.find({ genres: "Drama" });
+// exact equal for array
+db.movies.find({ genres: ["Drama"] });
+// in (find 30 or 42)
+db.movies.find({ runtime: { $in: [30, 42] } });
+// nin (not in)
+db.movies.find({ runtime: { $nin: [30, 42] } });
+// count
+db.movies.find({ "rating.average": { $lt: 5 } }).count();
+// or
+db.movies.find({
+  $or: [{ "rating.average": { $lt: 5 } }, { "rating.average": { $gt: 9.3 } }]
+});
+// nor (neither)
+db.movies.find({
+  $nor: [{ "rating.average": { $lt: 5 } }, { "rating.average": { $gt: 9.3 } }]
+});
+// and
+db.movies.find({
+  $and: [{ "rating.average": { $gt: 9 } }, { genres: "Drama" }]
+});
+// mongodb default and
+db.movies.find({ "rating.average": { $gt: 9 }, genres: "Drama" });
+db.movies.find({ $and: [{ genres: "Drama" }, { genres: "Horror" }] });
+// json cannot have some key
+//db.movies.find({"genres": "Drama", "genres": "Horror"}) = db.movies.find({"genres": "Horror"})
+// therefore even though mongodb default and, and operator is still necessary for looking for the same field
+
+// not
+db.movies.find({ runtime: { $not: { $eq: 60 } } });
+
+// element operator
+db.users.insertMany([
+  {
+    name: "Max",
+    hobbies: [
+      { title: "Sports", frequnecy: 3 },
+      { title: "Cooking", frequency: 6 }
+    ],
+    phone: 1219228382
+  },
+  {
+    name: "Manu",
+    hobbies: [
+      { title: "Cooking", frequency: 5 },
+      { title: "Cars", frequency: 2 }
+    ],
+    phone: "47345475",
+    age: 30
+  }
+]);
+
+// field exists
+db.users.find({ age: { $exists: true, $gte: 30 } });
+
+// null also count as exists
+db.users.insertOne({
+  name: "Anna",
+  hobbies: [
+    { title: "Sports", frequency: 2 },
+    { title: "Yogo", frequency: 3 }
+  ],
+  phone: "478667678754",
+  age: null
+});
+
+// type operator
+db.users.find({ phone: { $type: "number" } });
+db.users.find({ phone: { $type: "string" } });
+
+// regex operator (contains in this ezample)
+db.movies.find({ summary: { $regex: /musical/ } });
+
+// expression
+db.sales.insertMany([
+  { volume: 100, target: 120 },
+  { volume: 89, target: 80 },
+  { volume: 200, target: 177 }
+]);
+
+// compare between fields (dollar sign is important)
+db.sales.find({ $expr: { $gt: ["$volume", "$target"] } });
+
+// if volume is greater than 200, use volume minus 10 for comparison
+db.sales.find({
+  $expr: {
+    $gt: [
+      {
+        $cond: {
+          if: { $gte: ["$volume", 190] },
+          then: { $subtract: ["$volume", 10] },
+          else: "$volume"
+        }
+      },
+      "$target"
+    ]
+  }
+});
+
+// searching nested doc in array
+db.users.find({ "hobbies.title": "Sports" });
+
+db.users.insertOne({ name: "Chris", hobbies: ["Sports", "Cooking", "Hiking"] });
+
+// search for array length
+db.users.find({ hobbies: { $size: 3 } });
+db.users.find({ $where: "this.hobbies.length >= 2" });
+
+db.users.find({
+  $and: [{ "hobbies.title": "Sports" }, { "hobbies.frequency": { $gte: 2 } }]
+});
+
+// search for match of and condition in SAME doc
+db.user.find({
+  hobbies: { $elemMatch: { title: "Sports", frequency: { $gte: 3 } } }
+});
+

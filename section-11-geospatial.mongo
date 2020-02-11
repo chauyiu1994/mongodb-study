@@ -1,0 +1,103 @@
+/////////////////////////////////Geospatial Data//////////////////////////////////
+
+// geojson data must be entered in [longitude, latitude]
+db.places.insertOne({
+  name: "california academy of sciences",
+  location: { type: "Point", coordinates: [-122.4682834, 37.7698646] }
+});
+
+db.places.findOne();
+
+// finding nearest point with a certain max and min radius
+// creating geospatial index
+// ($minDistance and $maxDistance) use meter as unit
+// must add 2dsphere index before searching for geo info
+db.places.createIndex({ location: "2dsphere" });
+db.places.find({
+  location: {
+    $near: {
+      $geometry: { type: "Point", coordinates: [-122.464625, 37.771811] },
+      $minDistance: 10,
+      $maxDistance: 400
+    }
+  }
+});
+
+// find points within a polygon
+// Nopa will not be found in this case since it is not within the input polygon
+db.places.insertOne({
+  name: "Conservatory of Flowers",
+  location: { type: "Point", coordinates: [-122.4625693, 37.7711998] }
+});
+db.places.insertOne({
+  name: "Golden Gate Park Tennis Courts",
+  location: { type: "Point", coordinates: [-122.4611237, 37.7691158] }
+});
+db.places.insertOne({
+  name: "Nopa",
+  location: { type: "Point", coordinates: [-122.4392937, 37.7740721] }
+});
+
+// polygon must end with starting point to be completed
+db.places.find({
+  location: {
+    $geoWithin: {
+      $geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [-122.4547, 37.77473],
+            [-122.45303, 37.76641],
+            [-122.51026, 37.76411],
+            [-122.51088, 37.77131],
+            [-122.4547, 37.77473]
+          ]
+        ]
+      }
+    }
+  }
+});
+
+// insert a polygon object
+db.areas.insertOne({
+  name: "Golden Gate Park",
+  area: {
+    type: "Polygon",
+    coordinates: [
+      [
+        [-122.4547, 37.77473],
+        [-122.45303, 37.76641],
+        [-122.51026, 37.76411],
+        [-122.51088, 37.77131],
+        [-122.4547, 37.77473]
+      ]
+    ]
+  }
+});
+
+// find the areas which intersects with the input point
+db.areas.find({
+  area: {
+    $geoIntersects: {
+      $geometry: { type: "Point", coordinates: [-122.4547, 37.77473] }
+    }
+  }
+});
+// return nothing since the input does not intersect with any of the areas
+db.areas.find({
+  area: {
+    $geoIntersects: {
+      $geometry: { type: "Point", coordinates: [-122.4392937, 37.7740721] }
+    }
+  }
+});
+
+// find points within the drawn sphere
+// $centerSphere takes two args
+// 1. coordinate of desired center
+// 2. radius (1unit = earth radius, therefore 1km = 1/6378.1 = 0.0001567865) 
+db.places.find({
+  location: {
+    $geoWithin: { $centerSphere: [[-122.46203, 37.77286], 0.0001567865] }
+  }
+});
